@@ -11,3 +11,152 @@ Encoding: UTF-8
 
 RnwWeave: Sweave
 LaTeX: pdfLaTeX
+
+#BTC1855H - Assignment 3: Hangman Game 
+#Soumya Shastri
+
+##Program Capabilities: 
+#* - Reads the word list from project directory 
+#* - Samples a word from the list at random 
+#* - Informs the user of the length of the word and number of guesses allowed
+#* in the welcome message 
+#* - Validates user entry: Ensures entry is a letter input and accepts both lower 
+#* and upper case letters 
+#* -Verifies if guess is correct/incorrect and asks for the next letter
+#* -Warns user if they have already guessed the letter
+#* -Appropriate message is displayed if user has guessed the word correctly or if 
+#* they have exhausted their tries
+#* -Informs user of their remaining tries as they are playing
+#* -Visual cue is displayed for user to track their progress in the game
+#* - Allows user to guess the entire word at any time (Program recognizes an entry
+#* of more than one letter as an attempt to guess the entire word)
+
+#*Note: I used cat() instead of print() for displaying output in this program
+#*since I didn't want any additional formatting such as indicating the index of output '[1]' 
+
+#Create a a dictionary of words for the program to recognize
+wordList <- c("ankara", "amsterdam", "athens", "baghdad", "baku", "beijing", "berlin", "bogota", 
+              "brasilia", "brussels", "budapest", "cairo", "canberra", "caracas", "copenhagen", 
+              "dhaka", "dublin", "havana", "islamabad", "jakarta", "kabul", "kathmandu", "london",
+              "luxembourg", "monaco", "montevideo", "muscat", "oslo", "ottawa", "paris", "prague", 
+              "rome", "seoul", "stockholm", "tokyo", "vienna", "washington", "wellington")
+#Convert the word list to a text file 
+file_path <- "word_list.txt"
+writeLines(wordList, file_path)
+#the readLines function is used to read the file
+read_wordList <- readLines(file_path)
+
+# One word sampled from the list as the secret word 
+secretWord <- sample(wordList, size = 1)
+
+# Create function to give user a visual clue of their progress
+displayProgress <- function(word, guesses) {
+  masked_word <- "" #Initialize empty string
+  for (letter in strsplit(word, "")[[1]]) { #takes each letter in the 'word' and splits into individual characters
+    if (tolower(letter) %in% guesses) { #tolower function allows user to enter and the program to accept both upper and lower case letters
+      masked_word <- paste(masked_word, letter, sep = " ") #if letter found in 'guesses' then letter is revealed
+    } else {
+      masked_word <- paste(masked_word, "_", sep = " ") #else letter remains hidden with "_"
+    }
+  }
+  cat(masked_word, "\n") #this prints the final word representation
+}
+
+# Create function to check if the user's guess is correct
+isCorrectGuess <- function(word, guess) {
+  guess <- tolower(guess)  # Convert guess to lowercase 
+  guess %in% strsplit(tolower(word), "")[[1]]  # Check if guess exists in list of characters from strsplit which will render %in% true
+}
+
+# Create function to play the game
+playHangman <- function(word) {
+  # Max number of incorrect guesses allowed
+  max_incorrect_guesses <- 10
+  # Tracking guesses and incorrect guesses
+  guesses <- c()
+  incorrect_guesses <- c()
+  
+  # Welcome message to user: inform them of the length of the secret word and how many guesses they are allowed
+  cat("Welcome to Hangman!\n")
+  cat("Your category is National Capitals.\n")
+  cat("This secret word has", nchar(secretWord), "letters.\n")
+  cat("Type a letter to make your first guess or guess the whole word on your first try.\n")
+  cat("You have a total of", max_incorrect_guesses, "guesses available.\n")
+  cat("Good luck!\n\n")
+  
+  # Create a game loop so the game is interactive
+  while (TRUE) {
+    displayProgress(word, guesses)
+    cat("\n")
+    
+    # Get user input (letter or whole word)
+    user_input <- tolower(readline(prompt = "Enter your guess (one letter or the whole word): "))
+    
+    # Give the option to user if they want to guess the whole word
+    # The program assumes that if user inputs more than one letter, they are attempting to guess the whole word
+    if (nchar(user_input) > 1) {
+      if (tolower(user_input) == tolower(word)) {
+        cat("Congratulations! You guessed the capital correctly. Thank you for playing. You are a true champion!\n")
+      } else {
+        # Once the word is guessed incorrectly, there are no more tries remaining, the secret word is revealed
+        cat("Incorrect guess! Game over. The answer is:", word, "\n")
+      }
+      break #break statement used to exit the loop when user has exhausted all their tries, otherwise loop would be executed even when game has ended
+    }
+    # Validation: Ensures that the user input is a letter
+    #*The grepl() function searches for a pattern in the string of "[a-z]". The ! operator negates the result, so the 
+    #*condition is true only if the user_input does not contain any letter. nchar() not 1 indicates that the input is 
+    #*either empty, multiple characters, or more than a single letter which all counts as invalid entries
+    if (!grepl("[a-z]", user_input) || nchar(user_input) != 1) {
+      cat("Invalid entry. Please enter a single letter or the whole word. You got this!\n")
+      next #skips the remaining code
+    }
+    
+    # Additional functionality: Check if the letter has already been guessed
+    if (user_input %in% guesses) { # if user_input was already found in guesses
+      cat("You already guessed that letter. Please enter a new letter or guess the whole word\n")
+      next
+    }
+    guesses <- c(guesses, user_input) # Adds the guess to the list of guesses for the program to recognize repeats
+    
+    # To verify if the user's letter guess is correct
+    if (isCorrectGuess(word, user_input)) {
+      cat("Correct guess!\n")
+    } else {
+      cat("Incorrect guess! Try again.\n")
+      incorrect_guesses <- c(incorrect_guesses, user_input)
+    }
+    # Check if the game is won (by guessing letters only)
+    if (all(strsplit(tolower(word), "")[[1]] %in% guesses)) { #if all the individual letters of the 'word' are found in the 'guesses', returns TRUE
+      displayProgress(word, guesses)
+      cat("Congratulations! You guessed the capital correctly. Thank you for playing. You are a true champion!\n")
+      break
+    }
+    
+    # Check if the game is lost (by exhausting tries)
+    if (length(incorrect_guesses) >= max_incorrect_guesses) {
+      displayProgress(word, guesses)
+      cat("Game over! You did not guess the capital. The answer is:", word, "\n")
+      break
+    }
+    
+    # # Let the user know of remaining tries
+    remaining_tries <- max_incorrect_guesses - length(incorrect_guesses)
+    cat("Remaining tries:", remaining_tries, "\n")
+    cat("\n")
+  }
+}
+
+# Start the game! Enjoy! 
+playHangman(secretWord)
+
+
+# Caroline Rodrigues code review comments:
+
+#' Overall, your code had great readability and functioned the way I expected it to.
+#' I liked that you spoke about program functionality upfront, which also doubled as a project outline.
+#' It was evident that you used defensive coding practice for this assignment as the game would not allow the user to enter any other characters other than letters. 
+#' Every line of code ran well and fulfilled its requirements. 
+#' The code was easy to understand, evidenced by the comments throughout the file.
+#' One minor point I would consider for next time is to also upload the .txt file so users can save to working directory. Having the words in a separate file ensures that users cannot see answer options ahead of time. 
+#' The structure, style, performance and readability of the code met all assignment requirements
